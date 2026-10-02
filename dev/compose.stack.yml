@@ -1,0 +1,30 @@
+# Overlay: attach the dev environment to a running ancroo-stack.
+#
+# Joins the stack's "ai-network" so the backend reaches Ollama, Speaches and
+# n8n under the same hostnames the example workflow definitions use
+# (http://ollama:11434, http://speaches:8000, http://n8n:5678).
+#
+# dev.sh adds this file automatically when the "ai-network" exists.
+
+services:
+  dev-backend:
+    environment:
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - WHISPER_BASE_URL=http://speaches:8000
+      - N8N_URL=http://n8n:5678
+    networks:
+      - default
+      - ai-network
+
+  dev-runner:
+    environment:
+      - WHISPER_BASE_URL=http://speaches:8000
+    networks:
+      default:
+        aliases:
+          - ancroo-runner
+      ai-network: {}
+
+networks:
+  ai-network:
+    external: true

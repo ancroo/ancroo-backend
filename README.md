@@ -173,15 +173,24 @@ All settings are loaded from the `.env` file. Only `SECRET_KEY` and `DATABASE_UR
 - **Admin GUI:** `<server-url>/admin` — manage workflows, providers, and settings
 - **API Reference:** [docs/api.md](docs/api.md) — all endpoints at a glance
 
-**Local development setup:**
+**Local development setup (Docker, hot reload):**
+
+`dev.sh` starts PostgreSQL, the backend and [ancroo-runner](https://github.com/ancroo/ancroo-runner)
+(expected as sibling directory `../ancroo-runner`) with source code bind-mounted.
+If an Ancroo Stack is installed, the dev containers join its network and use its
+Ollama, Speaches and n8n.
 
 ```bash
-python -m venv venv && source venv/bin/activate
-pip install -r packages/backend/requirements.txt
-cd packages/backend
-alembic upgrade head
-uvicorn src.main:app --reload
+./dev.sh stack     # optional: start ollama, speaches, n8n from ../ancroo-stack
+./dev.sh up        # build and start — backend on :8900, runner on :8510
+./dev.sh import    # import the example-* workflows
+./dev.sh logs      # follow logs
+./dev.sh down      # stop (database is kept; ./dev.sh reset removes it)
 ```
+
+Optional settings (ports, model variant, external service URLs): copy
+`dev/.env.example` to `dev/.env`. Stop the stack's own `ancroo-backend` and
+`ancroo-runner` containers while developing — they use the same ports.
 
 ## Contributing
 

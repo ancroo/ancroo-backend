@@ -1,0 +1,94 @@
+# Ancroo Backend — local development environment
+#
+# Self-contained: PostgreSQL + backend + runner, both with hot reload.
+# Source code is bind-mounted, so edits apply without rebuilding the image.
+#
+# Use ../dev.sh instead of calling this file directly — it also attaches
+# the ancroo-stack network (Ollama, Speaches, n8n) when available.
+
+name: ancroo-dev
+
+services:
+  dev-postgres:
+    image: pgvector/pgvector:pg16
+    container_name: ancroo-dev-postgres
+    environment:
+      - POSTGRES_USER=ancroo
+      - POSTGRES_PASSWORD=ancroo
+      - POSTGRES_DB=ancroo
+    ports:
+      - "127.0.0.1:${DEV_POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - dev-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ancroo"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  dev-backend:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    image: ancroo-backend:dev
+    container_name: ancroo-dev-backend
+    environment:
+      - TZ=${TZ:-Europe/Berlin}
+      - DEBUG=true
+      - PYTHONDONTWRITEBYTECODE=1
+      - SECRET_KEY=${SECRET_KEY:-dev-only-insecure-secret-key}
+      - DATABASE_URL=postgresql+asyncpg://ancroo:ancroo@dev-postgres:5432/ancroo
+      - AUTH_ENABLED=false
+      - RUNNER_BASE_URL=http://ancroo-runner:8000
+      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+      - OLLAMA_DEFAULT_MODEL=${OLLAMA_DEFAULT_MODEL:-mistral:7b}
+      - WHISPER_BASE_URL=${WHISPER_BASE_URL:-http://host.docker.internal:8100}
+      - N8N_URL=${N8N_URL:-http://host.docker.internal:5678}
+      - N8N_API_KEY=${N8N_API_KEY:-}
+      - ANCROO_BACKENDS=${ANCROO_BACKENDS:-cuda}
+      - CORS_ORIGINS=["chrome-extension://","http://localhost:${DEV_BACKEND_PORT:-8900}"]
+      - WORKFLOWS_DIR=/data/workflows
+    volumes:
+      - ../packages/backend/src:/app/src
+      - ../packages/backend/alembic:/app/alembic
+      - ../packages/backend/alembic.ini:/app/alembic.ini:ro
+      - ../workflows:/data/workflows:ro
+    command: >
+      sh -c "alembic upgrade head &&
+             exec uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload --reload-dir src"
+    ports:
+      - "${DEV_BACKEND_PORT:-8900}:8000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      dev-postgres:
+        condition: service_healthy
+
+  dev-runner:
+    build:
+      context: ../../ancroo-runner
+    image: ancroo-runner:dev
+    container_name: ancroo-dev-runner
+    environment:
+      - TZ=${TZ:-Europe/Berlin}
+      - PYTHONDONTWRITEBYTECODE=1
+      - WHISPER_BASE_URL=${RUNNER_WHISPER_URL:-http://host.docker.internal:8100}
+    volumes:
+      - ../../ancroo-runner/app:/app/app
+      - ../../ancroo-runner/plugins:/app/plugins
+    command: >
+      uvicorn app.main:app --host 0.0.0.0 --port 8000
+      --reload --reload-dir app --reload-dir plugins
+    ports:
+      - "${DEV_RUNNER_PORT:-8510}:8000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      default:
+        # Same hostname as in the stack, so tool endpoint URLs from the
+        # example workflows (http://ancroo-runner:8000/...) resolve here too.
+        aliases:
+          - ancroo-runner
+
+volumes:
+  dev-pgdata:
