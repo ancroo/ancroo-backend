@@ -223,7 +223,7 @@ Ancroo Backend integrates with these external services (running in their own con
 
 ## License
 
-AGPLv3 — see [LICENSE](LICENSE). The Ancroo name is not covered by this license and remains the property of the author.
+AGPLv3 — see [LICENSE](LICENSE). The Ancroo name and the anchor logo are not covered by this license and remain the property of the author.
 
 ## Author
 
