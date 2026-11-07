@@ -40,7 +40,7 @@ graph LR
 
 Ancroo Backend runs **AI workflows** that the browser extension triggers. You select text in any website, press a shortcut, and the extension sends that text to the server. The server processes it with a local AI model and returns the result directly to your browser.
 
-![Ancroon Workflows and Sidepanel ](ancroo-admin-workflows.png)
+![Ancroon Workflows and Sidepanel ](assets/screenshots/ancroo-admin-workflows.png)
 
 **Example workflows (imported via admin API):**
 
